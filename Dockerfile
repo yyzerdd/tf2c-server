@@ -31,17 +31,21 @@ RUN apt-get update && \
       libc6:i386 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install SteamCMD directly from Valve (avoids EULA / dpkg issues)
-# Fix: ensure steamcmd.sh is executable for the srcds user
+# Install SteamCMD from Valve and add a wrapper in PATH
 RUN mkdir -p /opt/steamcmd && \
     wget -qO /opt/steamcmd/steamcmd_linux.tar.gz \
       https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz && \
     tar -xzf /opt/steamcmd/steamcmd_linux.tar.gz -C /opt/steamcmd && \
     rm -f /opt/steamcmd/steamcmd_linux.tar.gz && \
     chmod -R a+rX /opt/steamcmd && \
-    chmod +x /opt/steamcmd/steamcmd.sh /opt/steamcmd/steamcmd 2>/dev/null || true && \
-    ln -sf /opt/steamcmd/steamcmd.sh /usr/local/bin/steamcmd && \
-    chmod +x /usr/local/bin/steamcmd
+    chmod +x /opt/steamcmd/steamcmd.sh /opt/steamcmd/linux32/steamcmd && \
+    cat > /usr/local/bin/steamcmd <<'EOF'\n\
+#!/usr/bin/env bash\n\
+set -euo pipefail\n\
+cd /opt/steamcmd\n\
+exec ./steamcmd.sh "$@"\n\
+EOF\n\
+    && chmod +x /usr/local/bin/steamcmd
 
 # Create disabled user with home (matches wiki)
 RUN useradd -s /bin/false -mr ${SRCDS_USER}
