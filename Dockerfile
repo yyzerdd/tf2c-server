@@ -32,11 +32,16 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install SteamCMD directly from Valve (avoids EULA / dpkg issues)
+# Fix: ensure steamcmd.sh is executable for the srcds user
 RUN mkdir -p /opt/steamcmd && \
     wget -qO /opt/steamcmd/steamcmd_linux.tar.gz \
       https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz && \
     tar -xzf /opt/steamcmd/steamcmd_linux.tar.gz -C /opt/steamcmd && \
-    ln -sf /opt/steamcmd/steamcmd.sh /usr/local/bin/steamcmd
+    rm -f /opt/steamcmd/steamcmd_linux.tar.gz && \
+    chmod -R a+rX /opt/steamcmd && \
+    chmod +x /opt/steamcmd/steamcmd.sh /opt/steamcmd/steamcmd 2>/dev/null || true && \
+    ln -sf /opt/steamcmd/steamcmd.sh /usr/local/bin/steamcmd && \
+    chmod +x /usr/local/bin/steamcmd
 
 # Create disabled user with home (matches wiki)
 RUN useradd -s /bin/false -mr ${SRCDS_USER}
@@ -68,7 +73,7 @@ RUN chown -R srcds:srcds /home/srcds/bin
 
 # Copy entrypoint
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Persistent volumes
 VOLUME ["/home/srcds/tf", "/home/srcds/classified"]
